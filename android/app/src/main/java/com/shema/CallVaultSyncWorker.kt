@@ -15,7 +15,7 @@ class CallVaultSyncWorker(
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         try {
-            val url = URL("http://172.23.37.74:3000/api/v1/health")
+            val url = URL("https://shema-f5gd.onrender.com/api/v1/health")
             val connection = url.openConnection() as HttpURLConnection
             connection.connectTimeout = 5000
             connection.readTimeout = 5000

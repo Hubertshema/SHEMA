@@ -190,7 +190,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ isDarkMode, onTo
             ]}
             autoCapitalize="none"
             autoCorrect={false}
-            placeholder="http://172.23.37.74:3000/api/v1"
+            placeholder="https://shema-f5gd.onrender.com/api/v1"
             placeholderTextColor={colors.textSecondary}
           />
           <Button
