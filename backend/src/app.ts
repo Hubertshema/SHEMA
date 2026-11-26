@@ -27,6 +27,10 @@ app.get('/health', (req: Request, res: Response) => {
   res.status(200).json({ success: true, status: 'healthy', timestamp: new Date().toISOString() });
 });
 
+app.get('/api/v1', (req: Request, res: Response) => {
+  res.status(200).json({ success: true, service: 'CallVault API v1', status: 'healthy' });
+});
+
 // API Routes
 app.use('/api/v1/health', healthRoutes);
 app.use('/api/v1/auth', authRoutes);
