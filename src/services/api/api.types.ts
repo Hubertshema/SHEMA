@@ -68,6 +68,7 @@ export interface RecordingRegisterRequest {
   checksumSha256: string;
   encryptionAlgorithm?: string;
   storageObjectKey?: string;
+  storageUrl?: string;
   phoneNumber?: string;
   contactName?: string;
 }
@@ -83,6 +84,7 @@ export interface RecordingResponse {
   checksumSha256: string;
   encryptionAlgorithm: string;
   storageObjectKey: string;
+  storageUrl?: string;
   uploadStatus: string;
   createdAt: string;
   phoneNumber?: string;
@@ -107,6 +109,11 @@ export interface UploadInitiateResponse {
   uploadUrl: string;
   objectKey: string;
   expiresAt: string;
+  signature?: string;
+  timestamp?: number;
+  apiKey?: string;
+  folder?: string;
+  resourceType?: string;
 }
 
 export interface UploadCompleteResponse {

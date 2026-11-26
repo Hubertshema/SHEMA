@@ -96,6 +96,7 @@ CREATE TABLE IF NOT EXISTS recordings (
     contact_name VARCHAR(255),
     upload_status VARCHAR(50) NOT NULL DEFAULT 'PENDING', -- PENDING, UPLOADING, COMPLETED, FAILED, DELETED
     verification_status VARCHAR(50) NOT NULL DEFAULT 'UNVERIFIED', -- UNVERIFIED, VERIFIED, FAILED
+    storage_url VARCHAR(1024),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     uploaded_at TIMESTAMP WITH TIME ZONE,
     verified_at TIMESTAMP WITH TIME ZONE
@@ -130,6 +131,13 @@ BEGIN
         WHERE table_name = 'recordings' AND column_name = 'storage_object_key'
     ) THEN
         ALTER TABLE recordings ADD COLUMN storage_object_key VARCHAR(512);
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'recordings' AND column_name = 'storage_url'
+    ) THEN
+        ALTER TABLE recordings ADD COLUMN storage_url VARCHAR(1024);
     END IF;
 END $$;
 

@@ -26,10 +26,29 @@ export const uploadApi = {
     return await apiClient.post<UploadStatusResponse>(`/uploads/${sessionId}/cancel`) as any;
   },
 
-  async uploadFileToSignedUrl(uploadUrl: string, filePath: string, _fileSize: number): Promise<void> {
+  async uploadFileToSignedUrl(params: {
+    uploadUrl: string;
+    filePath: string;
+    fileSize: number;
+    signature?: string;
+    timestamp?: number;
+    apiKey?: string;
+    folder?: string;
+    resourceType?: string;
+    publicId?: string;
+  }): Promise<void> {
     if (!SecurityModule || !SecurityModule.uploadFileToUrl) {
       throw new Error('SecurityModule.uploadFileToUrl is not available on this device.');
     }
-    await SecurityModule.uploadFileToUrl(filePath, uploadUrl);
+    await SecurityModule.uploadFileToUrl(
+      params.filePath,
+      params.uploadUrl,
+      params.signature || '',
+      params.timestamp || 0,
+      params.apiKey || '',
+      params.folder || 'callvault',
+      params.resourceType || 'auto',
+      params.publicId || params.filePath,
+    );
   },
 };

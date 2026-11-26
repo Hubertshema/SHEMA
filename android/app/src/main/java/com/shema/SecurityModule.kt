@@ -8,6 +8,7 @@ import org.json.JSONObject
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.io.DataOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.KeyStore
@@ -264,7 +265,7 @@ class SecurityModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
     }
 
     @ReactMethod
-    fun uploadFileToUrl(filePath: String, uploadUrl: String, promise: Promise) {
+    fun uploadFileToUrl(filePath: String, uploadUrl: String, signature: String, timestamp: Double, apiKey: String, folder: String, resourceType: String, publicId: String, promise: Promise) {
         try {
             val file = File(filePath)
             if (!file.exists()) {
@@ -274,31 +275,76 @@ class SecurityModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
 
             val url = URL(uploadUrl)
             val connection = url.openConnection() as HttpURLConnection
-            connection.requestMethod = "PUT"
+            connection.requestMethod = "POST"
             connection.doOutput = true
-            connection.setRequestProperty("Content-Type", "application/octet-stream")
-            connection.setRequestProperty("Content-Length", file.length().toString())
-            connection.connectTimeout = 60000
-            connection.readTimeout = 60000
+            connection.useCaches = false
+            connection.setRequestProperty("Connection", "Keep-Alive")
+            connection.connectTimeout = 120000
+            connection.readTimeout = 120000
 
-            val buffer = ByteArray(8192)
+            val boundary = "=====CallVaultBoundary${System.currentTimeMillis()}====="
+            val tail = "\r\n--$boundary--\r\n"
+
+            connection.setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
+
+            val outputStream = DataOutputStream(connection.outputStream)
+
+            // Add text fields
+            outputStream.writeBytes("--$boundary\r\n")
+            outputStream.writeBytes("Content-Disposition: form-data; name=\"api_key\"\r\n\r\n")
+            outputStream.writeBytes(apiKey)
+            outputStream.writeBytes("\r\n")
+
+            outputStream.writeBytes("--$boundary\r\n")
+            outputStream.writeBytes("Content-Disposition: form-data; name=\"timestamp\"\r\n\r\n")
+            outputStream.writeBytes(timestamp.toLong().toString())
+            outputStream.writeBytes("\r\n")
+
+            outputStream.writeBytes("--$boundary\r\n")
+            outputStream.writeBytes("Content-Disposition: form-data; name=\"signature\"\r\n\r\n")
+            outputStream.writeBytes(signature)
+            outputStream.writeBytes("\r\n")
+
+            outputStream.writeBytes("--$boundary\r\n")
+            outputStream.writeBytes("Content-Disposition: form-data; name=\"folder\"\r\n\r\n")
+            outputStream.writeBytes(folder)
+            outputStream.writeBytes("\r\n")
+
+            outputStream.writeBytes("--$boundary\r\n")
+            outputStream.writeBytes("Content-Disposition: form-data; name=\"resource_type\"\r\n\r\n")
+            outputStream.writeBytes(resourceType)
+            outputStream.writeBytes("\r\n")
+
+            outputStream.writeBytes("--$boundary\r\n")
+            outputStream.writeBytes("Content-Disposition: form-data; name=\"public_id\"\r\n\r\n")
+            outputStream.writeBytes(publicId)
+            outputStream.writeBytes("\r\n")
+
+            // Add file field
+            outputStream.writeBytes("--$boundary\r\n")
+            outputStream.writeBytes("Content-Disposition: form-data; name=\"file\"; filename=\"${file.name}\"\r\n")
+            outputStream.writeBytes("Content-Type: audio/mp4\r\n\r\n")
+
             val inputStream = FileInputStream(file)
-            val outputStream = connection.outputStream
-
+            val buffer = ByteArray(8192)
             var bytesRead: Int
             while (inputStream.read(buffer).also { bytesRead = it } != -1) {
                 outputStream.write(buffer, 0, bytesRead)
             }
-            outputStream.flush()
-            outputStream.close()
             inputStream.close()
 
+            outputStream.writeBytes(tail)
+            outputStream.flush()
+            outputStream.close()
+
             val responseCode = connection.responseCode
+            val responseStream = if (responseCode in 200..299) connection.inputStream else connection.errorStream
+            val responseBody = responseStream?.bufferedReader()?.readText() ?: ""
+
             if (responseCode in 200..299) {
-                promise.resolve(true)
+                promise.resolve(responseBody)
             } else {
-                val errorBody = connection.errorStream?.bufferedReader()?.readText() ?: ""
-                promise.reject("UPLOAD_FAILED", "Upload failed with status $responseCode: $errorBody")
+                promise.reject("UPLOAD_FAILED", "Upload failed with status $responseCode: $responseBody")
             }
             connection.disconnect()
         } catch (e: Exception) {

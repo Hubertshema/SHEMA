@@ -92,7 +92,17 @@ export const syncOrchestrator = {
           const sessionId = initiateRes.sessionId;
           const uploadUrl = initiateRes.uploadUrl;
 
-          await uploadApi.uploadFileToSignedUrl(uploadUrl, item.encryptedFilePath, item.fileSize);
+          await uploadApi.uploadFileToSignedUrl({
+            uploadUrl,
+            filePath: item.encryptedFilePath,
+            fileSize: item.fileSize,
+            signature: initiateRes.signature || '',
+            timestamp: initiateRes.timestamp || 0,
+            apiKey: initiateRes.apiKey || '',
+            folder: initiateRes.folder || 'callvault',
+            resourceType: initiateRes.resourceType || 'auto',
+            publicId: initiateRes.objectKey,
+          });
           await recordingQueueService.updateStatus(item.id, 'uploaded');
 
           const completeRes = await uploadApi.completeUpload(sessionId);

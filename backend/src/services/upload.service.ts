@@ -1,6 +1,8 @@
 import { query } from '../config/database';
 import { storageService } from './storage.service';
+import { STORAGE_CONFIG } from '../config/storage';
 import { logAudit } from '../middleware/audit.middleware';
+import { v2 as cloudinary } from 'cloudinary';
 
 export class UploadService {
   async initiateUpload(userId: string, data: {
@@ -113,6 +115,20 @@ export class UploadService {
     const verificationStatus = verification.isValid ? 'VERIFIED' : 'FAILED';
     const uploadStatus = verification.isValid ? 'COMPLETED' : 'FAILED';
 
+    // Get Cloudinary secure_url for storage_url
+    let storageUrl: string | null = null;
+    if (STORAGE_CONFIG.provider === 'cloudinary' && verification.isValid) {
+      try {
+        const resource = await cloudinary.api.resource(storageObjectKey, {
+          resource_type: 'video',
+          type: 'upload',
+        });
+        storageUrl = resource.secure_url || null;
+      } catch {
+        // storage_url optional
+      }
+    }
+
     // Update upload session
     await query(
       `UPDATE upload_sessions SET upload_status = $1, completed_at = CURRENT_TIMESTAMP WHERE id = $2`,
@@ -121,8 +137,8 @@ export class UploadService {
 
     // Update recording
     await query(
-      `UPDATE recordings SET upload_status = $1, verification_status = $2, uploaded_at = CURRENT_TIMESTAMP, verified_at = CURRENT_TIMESTAMP WHERE id = $3`,
-      [uploadStatus, verificationStatus, session.recording_id]
+      `UPDATE recordings SET upload_status = $1, verification_status = $2, uploaded_at = CURRENT_TIMESTAMP, verified_at = CURRENT_TIMESTAMP, storage_url = COALESCE($3, storage_url) WHERE id = $4`,
+      [uploadStatus, verificationStatus, storageUrl, session.recording_id]
     );
 
     await logAudit(userId, session.device_id, 'COMPLETE_UPLOAD', verification.isValid ? 'SUCCESS' : 'FAILURE');
